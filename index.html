@@ -1,1 +1,474 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Duel - Samurai Sheath Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Kanit:wght@300;600&display=swap');
+        
+        body {
+            margin: 0;
+            background-color: #020617;
+            color: white;
+            font-family: 'Kanit', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
 
+        #game-container {
+            position: relative;
+            border: 2px solid #1e293b;
+            background: radial-gradient(circle, #0f172a 0%, #020617 100%);
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            border-radius: 8px;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .hud {
+            position: absolute;
+            top: 25px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 50px;
+            pointer-events: none;
+            font-family: 'Orbitron', sans-serif;
+            z-index: 20;
+        }
+
+        .health-bar-bg {
+            width: 320px;
+            height: 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+        }
+
+        #p1-health-fill { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+        #p2-health-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+
+        .skills-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            width: 320px;
+        }
+
+        .skill-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .skill-cd-bg {
+            height: 5px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 1px;
+            overflow: hidden;
+        }
+
+        .skill-cd-fill {
+            height: 100%;
+            width: 100%;
+            background: #fbbf24;
+            transition: width 0.1s linear;
+        }
+
+        .skill-label {
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .timer {
+            font-size: 36px;
+            color: #f8fafc;
+            border-bottom: 3px solid #fbbf24;
+            padding: 0 15px;
+        }
+
+        #notice-display {
+            position: absolute;
+            top: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fbbf24;
+            font-weight: bold;
+            font-size: 32px;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 30;
+            text-align: center;
+        }
+
+        #overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mb-6 flex gap-32 text-center">
+        <div class="text-blue-400">
+            <p class="font-bold text-xl uppercase tracking-[0.3em]">P1 SHADOW</p>
+            <p class="text-[10px] text-gray-500 mt-1">S: SLASH | Q: COUNTER | E: ULTIMATE</p>
+        </div>
+        <div class="text-red-400">
+            <p class="font-bold text-xl uppercase tracking-[0.3em]">P2 BLADE</p>
+            <p class="text-[10px] text-gray-500 mt-1">K: SLASH | U: COUNTER | O: ULTIMATE</p>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div id="notice-display">PARRIED!</div>
+        <div class="hud">
+            <div class="flex flex-col">
+                <div class="health-bar-bg"><div id="p1-health-fill" class="health-bar-fill"></div></div>
+                <div class="skills-row">
+                    <div class="skill-item"><div class="skill-cd-bg"><div id="p1-slash-cd" class="skill-cd-fill" style="background: #fff;"></div></div><span class="skill-label">SLASH</span></div>
+                    <div class="skill-item"><div class="skill-cd-bg"><div id="p1-counter-cd" class="skill-cd-fill"></div></div><span class="skill-label">COUNTER</span></div>
+                    <div class="skill-item"><div class="skill-cd-bg"><div id="p1-ultimate-cd" class="skill-cd-fill" style="background: #ef4444;"></div></div><span class="skill-label">ULTIMATE</span></div>
+                </div>
+            </div>
+            <div id="timer" class="timer">99</div>
+            <div class="flex flex-col items-end">
+                <div class="health-bar-bg"><div id="p2-health-fill" class="health-bar-fill"></div></div>
+                <div class="skills-row">
+                    <div class="skill-item"><div class="skill-cd-bg"><div id="p2-ultimate-cd" class="skill-cd-fill" style="background: #ef4444;"></div></div><span class="skill-label">ULTIMATE</span></div>
+                    <div class="skill-item"><div class="skill-cd-bg"><div id="p2-counter-cd" class="skill-cd-fill"></div></div><span class="skill-label">COUNTER</span></div>
+                    <div class="skill-item"><div class="skill-cd-bg"><div id="p2-slash-cd" class="skill-cd-fill" style="background: #fff;"></div></div><span class="skill-label">SLASH</span></div>
+                </div>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="overlay">
+            <h1 id="win-text" class="text-6xl font-bold mb-10 text-white tracking-widest italic">VICTORY</h1>
+            <button onclick="location.reload()" class="border-2 border-white/40 text-white px-12 py-4 font-bold rounded-full hover:bg-white hover:text-black transition-all uppercase tracking-[0.2em] text-sm">REMATCH</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1000;
+        canvas.height = 500;
+
+        const config = {
+            gravity: 0.65,
+            groundY: 450,
+            moveSpeed: 6.5,
+            jumpForce: -15,
+            attackWindupMs: 150,
+            ultChargeMs: 1800,
+            attackCooldownMs: 800,
+            counterWindowMs: 1500,
+            failCounterStunMs: 2000,
+            successCounterStunMs: 1500,
+            ultraStunMs: 10000,
+            counterCooldownMs: 4500,
+            ultCooldownMs: 12000
+        };
+
+        const keys = {};
+        let gameActive = true;
+        let timeLeft = 99;
+
+        class Fighter {
+            constructor({ pos, color, id }) {
+                this.id = id;
+                this.pos = pos;
+                this.vel = { x: 0, y: 0 };
+                this.width = 45;
+                this.height = 120;
+                this.color = color;
+                this.health = 100;
+                this.facing = id === 1 ? 1 : -1;
+                this.stunned = false;
+                this.stunTimer = 0;
+                this.isAttacking = false;
+                this.attackFrame = 0;
+                this.isWindingUp = false;
+                this.windupStart = 0;
+                this.isChargingUlt = false;
+                this.chargeStart = 0;
+                this.isCountering = false;
+                this.counterStart = 0;
+                this.lastAttackUsed = 0; 
+                this.lastCounterUsed = 0;
+                this.lastUltUsed = 0;
+                this.isUltAction = false;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.25)';
+                ctx.beginPath();
+                ctx.ellipse(this.pos.x + this.width/2, config.groundY, 40, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                let bodyColor = this.color;
+                if (this.stunned) bodyColor = "#334155";
+                if (this.isCountering) {
+                    const pulse = Math.sin(Date.now() * 0.02) * 40 + 215;
+                    bodyColor = `rgb(${pulse}, 180, 20)`;
+                }
+                if (this.isChargingUlt) bodyColor = Math.sin(Date.now() * 0.04) > 0 ? "#ff0000" : "#450a0a";
+
+                // Model
+                ctx.fillStyle = bodyColor;
+                ctx.fillRect(this.pos.x + 5, this.pos.y, 35, 35); // Head
+                ctx.fillRect(this.pos.x, this.pos.y + 40, 45, 80); // Torso
+                ctx.fillStyle = this.stunned ? "#000" : "#fff";
+                ctx.fillRect(this.facing === 1 ? this.pos.x + 28 : this.pos.x + 7, this.pos.y + 12, 10, 4);
+
+                this.drawKatanaAtWaist();
+
+                if (this.isAttacking) this.drawSlashEffect();
+                ctx.restore();
+            }
+
+            drawKatanaAtWaist() {
+                // เอว (Waist Position)
+                const waistX = this.facing === 1 ? this.pos.x + 5 : this.pos.x + 40;
+                const waistY = this.pos.y + 85;
+
+                ctx.save();
+                ctx.translate(waistX, waistY);
+
+                // Scabbard (ฝักดาบ) - ติดอยู่ที่เอวเสมอ
+                ctx.rotate(this.facing === 1 ? Math.PI / 6 : -Math.PI / 6);
+                ctx.fillStyle = "#000";
+                ctx.fillRect(this.facing === 1 ? -35 : -5, -3, 40, 6);
+
+                // Sword Logic
+                let swordAngle = 0;
+                let swordX = 0;
+                let swordY = 0;
+                let isDrawn = false;
+
+                if (this.isAttacking || this.isWindingUp || this.isChargingUlt) {
+                    isDrawn = true;
+                    // เมื่อชักดาบ: ย้ายไปที่มือ
+                    ctx.restore();
+                    ctx.save();
+                    const handX = this.facing === 1 ? this.pos.x + 35 : this.pos.x + 10;
+                    const handY = this.pos.y + 70;
+                    ctx.translate(handX, handY);
+
+                    if (this.isWindingUp || this.isChargingUlt) {
+                        swordAngle = this.facing === 1 ? -Math.PI / 1.1 : Math.PI / 1.1;
+                    } else if (this.isAttacking) {
+                        const progress = this.attackFrame / 15;
+                        const start = this.facing === 1 ? -Math.PI / 1.1 : Math.PI / 1.1;
+                        const end = this.facing === 1 ? Math.PI / 1.8 : -Math.PI / 1.8;
+                        swordAngle = start + (end - start) * progress;
+                    }
+                } else if (this.isCountering) {
+                    // ท่าเตรียมชักดาบ (จับด้ามดาบที่เอว)
+                    isDrawn = false;
+                    ctx.fillStyle = "#fbbf24"; // ด้ามดาบเรืองแสง
+                    ctx.fillRect(this.facing === 1 ? -45 : 5, -5, 12, 10);
+                } else {
+                    // เหน็บปกติ
+                    isDrawn = false;
+                    ctx.fillStyle = "#334155"; // ด้ามดาบปกติ
+                    ctx.fillRect(this.facing === 1 ? -42 : 2, -4, 10, 8);
+                }
+
+                if (isDrawn) {
+                    ctx.rotate(swordAngle);
+                    // Hilt (ด้าม)
+                    ctx.fillStyle = "#0f172a";
+                    ctx.fillRect(-2, 0, 4, 22);
+                    // Guard (กระบังมือ)
+                    ctx.fillStyle = (this.isChargingUlt || this.isUltAction) ? "#ef4444" : "#fbbf24";
+                    ctx.fillRect(-7, 22, 14, 3);
+                    // Blade (ใบดาบ)
+                    const bladeLen = this.isUltAction ? 120 : 70;
+                    ctx.fillStyle = (this.isChargingUlt || this.isUltAction) ? "#f87171" : "#f1f5f9";
+                    ctx.beginPath();
+                    ctx.moveTo(-1.8, 25); ctx.lineTo(1.8, 25); ctx.lineTo(0, 25 + bladeLen); ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            drawSlashEffect() {
+                const progress = this.attackFrame / 15;
+                const reach = this.isUltAction ? 280 : 150;
+                const color = this.isUltAction ? "rgba(239, 68, 68, 0.85)" : "rgba(255, 255, 255, 0.7)";
+                ctx.strokeStyle = color;
+                ctx.lineWidth = this.isUltAction ? 18 : 6;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                const centerX = this.facing === 1 ? this.pos.x + this.width : this.pos.x;
+                const centerY = this.pos.y + 60;
+                const startAngle = -Math.PI / 2.2;
+                const endAngle = this.facing === 1 ? Math.PI / 2.5 : -Math.PI - Math.PI / 2.5;
+                const currentAngle = startAngle + (endAngle - startAngle) * progress;
+                ctx.arc(centerX, centerY, reach, startAngle, currentAngle, this.facing === -1);
+                ctx.stroke();
+            }
+
+            update(opponent) {
+                if (this.stunned && Date.now() > this.stunTimer) this.stunned = false;
+                if (!this.stunned) {
+                    if (this.isCountering) {
+                        this.vel.x = 0;
+                        if (Date.now() - this.counterStart > config.counterWindowMs) {
+                            this.isCountering = false;
+                            this.applyStun(config.failCounterStunMs);
+                            showNotice(`P${this.id} COUNTER FAILED<br><span style="font-size: 16px;">STUNNED 2s</span>`);
+                        }
+                    } else if (this.isChargingUlt) {
+                        this.vel.x = 0;
+                        if (Date.now() - this.chargeStart > config.ultChargeMs) {
+                            this.isChargingUlt = false; this.isAttacking = true; this.isUltAction = true; this.attackFrame = 0; this.checkHit(opponent);
+                        }
+                    } else if (this.isWindingUp) {
+                        if (Date.now() - this.windupStart > config.attackWindupMs) {
+                            this.isWindingUp = false; this.isAttacking = true; this.attackFrame = 0; this.checkHit(opponent);
+                        }
+                    }
+                    if (this.isAttacking) {
+                        this.attackFrame += 2;
+                        if (this.attackFrame > 15) { this.isAttacking = false; this.isUltAction = false; }
+                    }
+                    this.pos.x += this.vel.x;
+                }
+                this.pos.y += this.vel.y;
+                if (this.pos.y + this.height >= config.groundY) { this.pos.y = config.groundY - this.height; this.vel.y = 0; }
+                else this.vel.y += config.gravity;
+                this.pos.x = Math.max(0, Math.min(canvas.width - this.width, this.pos.x));
+                if (opponent && !this.isAttacking && !this.isWindingUp && !this.isChargingUlt && !this.isCountering) this.facing = this.pos.x < opponent.pos.x ? 1 : -1;
+                this.updateUI();
+                this.draw();
+            }
+
+            updateUI() {
+                const now = Date.now();
+                document.getElementById(`p${this.id}-slash-cd`).style.width = Math.min(100, ((now - this.lastAttackUsed) / config.attackCooldownMs) * 100) + '%';
+                document.getElementById(`p${this.id}-counter-cd`).style.width = Math.min(100, ((now - this.lastCounterUsed) / config.counterCooldownMs) * 100) + '%';
+                document.getElementById(`p${this.id}-ultimate-cd`).style.width = Math.min(100, ((now - this.lastUltUsed) / config.ultCooldownMs) * 100) + '%';
+            }
+
+            attack() {
+                if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt) return;
+                if (Date.now() - this.lastAttackUsed < config.attackCooldownMs) return;
+                this.isWindingUp = true; this.windupStart = Date.now(); this.lastAttackUsed = Date.now();
+            }
+
+            ultimate() {
+                if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt) return;
+                if (Date.now() - this.lastUltUsed < config.ultCooldownMs) return;
+                this.isChargingUlt = true; this.chargeStart = Date.now(); this.lastUltUsed = Date.now();
+            }
+
+            counter() {
+                if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt) return;
+                if (Date.now() - this.lastCounterUsed < config.counterCooldownMs) return;
+                this.isCountering = true; this.counterStart = Date.now(); this.lastCounterUsed = Date.now();
+            }
+
+            applyStun(ms) {
+                this.stunned = true; this.stunTimer = Date.now() + ms;
+                this.isAttacking = false; this.isWindingUp = false; this.isCountering = false; this.isChargingUlt = false; this.isUltAction = false; this.vel.x = 0;
+            }
+
+            checkHit(opponent) {
+                const reach = this.isUltAction ? 280 : 150;
+                const atkX = this.facing === 1 ? this.pos.x + this.width : this.pos.x - reach;
+                if (atkX < opponent.pos.x + opponent.width && atkX + reach > opponent.pos.x &&
+                    this.pos.y - 40 < opponent.pos.y + opponent.height && this.pos.y + this.height + 40 > opponent.pos.y) {
+                    if (opponent.isCountering) {
+                        if (this.isUltAction) { this.applyStun(config.ultraStunMs); showNotice("ULTIMATE PARRIED!<br><span style='font-size: 20px; color: #ef4444;'>ULTRA STUN: 10s</span>"); }
+                        else { this.applyStun(config.successCounterStunMs); showNotice("PARRIED!"); }
+                        opponent.isCountering = false; opponent.lastCounterUsed = 0;
+                    } else {
+                        opponent.health -= this.isUltAction ? 50 : 15; opponent.applyStun(this.isUltAction ? 1000 : 200);
+                        canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+                        setTimeout(() => canvas.style.transform = 'none', 100);
+                    }
+                }
+            }
+        }
+
+        const p1 = new Fighter({ pos: { x: 150, y: 0 }, color: '#3b82f6', id: 1 });
+        const p2 = new Fighter({ pos: { x: 800, y: 0 }, color: '#ef4444', id: 2 });
+
+        function showNotice(text) {
+            const el = document.getElementById('notice-display');
+            el.innerHTML = text; el.style.opacity = '1';
+            setTimeout(() => { if(gameActive) el.style.opacity = '0'; }, 2000);
+        }
+
+        function endGame(text) {
+            gameActive = false; document.getElementById('win-text').innerText = text; document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function handleInput() {
+            if (!gameActive) return;
+            p1.vel.x = 0;
+            if (!p1.stunned && !p1.isWindingUp && !p1.isChargingUlt && !p1.isCountering) {
+                if (keys['a']) p1.vel.x = -config.moveSpeed; if (keys['d']) p1.vel.x = config.moveSpeed;
+            }
+            p2.vel.x = 0;
+            if (!p2.stunned && !p2.isWindingUp && !p2.isChargingUlt && !p2.isCountering) {
+                if (keys['j']) p2.vel.x = -config.moveSpeed; if (keys['l']) p2.vel.x = config.moveSpeed;
+            }
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            handleInput(); p1.update(p2); p2.update(p1);
+            document.getElementById('p1-health-fill').style.width = Math.max(0, p1.health) + '%';
+            document.getElementById('p2-health-fill').style.width = Math.max(0, p2.health) + '%';
+            if (p1.health <= 0) endGame("PLAYER 2 VICTORIOUS");
+            else if (p2.health <= 0) endGame("PLAYER 1 VICTORIOUS");
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase(); keys[k] = true;
+            if (k === 'w' && p1.pos.y >= config.groundY - p1.height) p1.vel.y = config.jumpForce;
+            if (k === 's') p1.attack(); if (k === 'q') p1.counter(); if (k === 'e') p1.ultimate();
+            if (k === 'i' && p2.pos.y >= config.groundY - p2.height) p2.vel.y = config.jumpForce;
+            if (k === 'k') p2.attack(); if (k === 'u') p2.counter(); if (k === 'o') p2.ultimate();
+        });
+        window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        setInterval(() => { if (gameActive) { timeLeft--; document.getElementById('timer').innerText = timeLeft; if (timeLeft <= 0) endGame("DRAW"); } }, 1000);
+        gameLoop();
+    </script>
+</body>
+</html>
