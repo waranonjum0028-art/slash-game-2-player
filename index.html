@@ -1,48 +1,56 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hybrid Duel - Multi-Platform</title>
+    <title>Hybrid Duel - Shadow Samurai Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Kanit:wght@300;600&display=swap');
         
         body {
             margin: 0;
             background-color: #020617;
             color: white;
-            font-family: 'Noto Sans JP', sans-serif;
+            font-family: 'Kanit', sans-serif;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            touch-action: none;
+            touch-action: none; /* ป้องกันการซูมหรือเลื่อนหน้าจอขณะเล่น */
+        }
+
+        #game-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            aspect-ratio: 2 / 1;
         }
 
         #game-container {
             position: relative;
-            border: 4px solid #1e293b;
-            background: #000;
-            box-shadow: 0 0 50px rgba(59, 130, 246, 0.2);
-            border-radius: 12px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #1e293b;
+            background: radial-gradient(circle, #0f172a 0%, #020617 100%);
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            border-radius: 8px;
             overflow: hidden;
-            width: 1100px;
-            max-width: 95vw;
-            aspect-ratio: 2 / 1;
         }
 
         canvas {
-            display: block;
             width: 100%;
             height: 100%;
+            display: block;
         }
 
+        /* HUD Styles */
         .hud {
             position: absolute;
-            top: 10px;
+            top: 15px;
             width: 100%;
             display: flex;
             justify-content: space-between;
@@ -52,11 +60,11 @@
             z-index: 20;
         }
 
-        .health-container { width: 30%; }
         .health-bar-bg {
-            height: 15px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(255,255,255,0.2);
+            width: clamp(100px, 30vw, 320px);
+            height: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 2px;
             overflow: hidden;
         }
@@ -64,486 +72,499 @@
         .health-bar-fill {
             height: 100%;
             width: 100%;
-            transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: width 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67);
         }
 
-        #p1-health-fill { background: linear-gradient(90deg, #2563eb, #60a5fa); }
-        #p2-health-fill { background: linear-gradient(90deg, #dc2626, #f87171); }
+        #p1-health-fill { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+        #p2-health-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
 
-        .timer-box {
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid #fbbf24;
-            padding: 2px 10px;
-            border-radius: 4px;
-            font-size: 20px;
-            color: #fbbf24;
-        }
-
-        /* Mobile Controls Overlay - Hidden by default */
-        .mobile-controls {
-            position: absolute;
-            bottom: 15px;
-            width: 100%;
-            display: none; /* Will be shown via JS if touch device detected */
-            justify-content: space-between;
-            padding: 0 20px;
-            pointer-events: none;
-            z-index: 60;
-        }
-
-        .control-group {
+        .skills-row {
             display: flex;
-            gap: 12px;
-            pointer-events: auto;
+            gap: 5px;
+            margin-top: 8px;
+            width: 100%;
         }
 
-        .btn-circle {
-            width: 65px;
-            height: 65px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.15);
+        .skill-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .skill-cd-bg {
+            height: 4px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 1px;
+            overflow: hidden;
+        }
+
+        .skill-cd-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        #p1-counter-cd { background: #3b82f6; }
+        #p2-counter-cd { background: #ef4444; }
+
+        .skill-label {
+            font-size: 7px;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .timer {
+            font-size: 24px;
+            color: #f8fafc;
+            border-bottom: 2px solid #64748b;
+            padding: 0 10px;
+        }
+
+        #notice-display {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: clamp(18px, 5vw, 32px);
+            font-family: 'Orbitron', sans-serif;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 30;
+            text-align: center;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none; /* แสดงผลเฉพาะบนมือถือด้วย JS */
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 160px;
+            padding: 0 20px;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-weight: bold;
-            font-size: 13px;
             user-select: none;
-            backdrop-filter: blur(2px);
             -webkit-tap-highlight-color: transparent;
-            transition: transform 0.1s, background 0.1s;
         }
 
-        .btn-circle:active {
-            background: rgba(255, 255, 255, 0.25);
-            transform: scale(0.92);
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.9);
         }
 
-        .btn-blue { border-color: rgba(59, 130, 246, 0.5); color: #60a5fa; }
-        .btn-red { border-color: rgba(239, 68, 68, 0.5); color: #f87171; }
-        .btn-yellow { border-color: rgba(251, 191, 36, 0.5); color: #fbbf24; }
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(2, 50px);
+            gap: 10px;
+        }
 
-        #notice-display {
-            position: absolute;
-            top: 30%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 40px;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 50;
-            text-align: center;
-            text-transform: uppercase;
+        .action-btns {
+            display: grid;
+            grid-template-columns: repeat(2, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 15px;
         }
 
         #overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(2, 6, 23, 0.9);
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(5px);
         }
 
-        .skill-icon { height: 4px; background: #1e293b; border-radius: 2px; margin-top: 2px; overflow: hidden; }
-        .cd-progress { height: 100%; width: 100%; background: #fff; }
-
+        .instructions {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
         @media (max-width: 768px) {
-            .btn-circle { width: 55px; height: 55px; font-size: 11px; }
-            .mobile-controls { bottom: 8px; padding: 0 10px; }
+            .instructions { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div id="notice-display">PARRIED</div>
-        
-        <div class="hud">
-            <div class="health-container">
-                <div class="health-bar-bg"><div id="p1-health-fill" class="health-bar-fill"></div></div>
-                <div class="flex gap-1 mt-1">
-                    <div class="flex-1"><div class="skill-icon"><div id="p1-s-cd" class="cd-progress"></div></div></div>
-                    <div class="flex-1"><div class="skill-icon"><div id="p1-q-cd" class="cd-progress" style="background: #fbbf24;"></div></div></div>
-                    <div class="flex-1"><div class="skill-icon"><div id="p1-e-cd" class="cd-progress" style="background: #ef4444;"></div></div></div>
+    <div class="instructions mb-4 flex gap-32 text-center">
+        <div class="text-blue-400">
+            <p class="font-bold text-lg uppercase tracking-widest">P1 SHADOW</p>
+            <p class="text-[10px] text-gray-500">WASD: Move/Jump | S: Slash | Q: Counter | E: Ult</p>
+        </div>
+        <div class="text-red-400">
+            <p class="font-bold text-lg uppercase tracking-widest">P2 BLADE</p>
+            <p class="text-[10px] text-gray-500">Arrows: Move/Jump | K: Slash | U: Counter | O: Ult</p>
+        </div>
+    </div>
+
+    <div id="game-wrap">
+        <div id="game-container">
+            <div id="notice-display">PARRIED!</div>
+            <div class="hud">
+                <div class="flex flex-col">
+                    <div class="health-bar-bg"><div id="p1-health-fill" class="health-bar-fill"></div></div>
+                    <div class="skills-row">
+                        <div class="skill-item"><div class="skill-cd-bg"><div id="p1-slash-cd" class="skill-cd-fill" style="background: #fff;"></div></div><span class="skill-label">ATK</span></div>
+                        <div class="skill-item"><div class="skill-cd-bg"><div id="p1-counter-cd" class="skill-cd-fill"></div></div><span class="skill-label">CTR</span></div>
+                        <div class="skill-item"><div class="skill-cd-bg"><div id="p1-ultimate-cd" class="skill-cd-fill" style="background: #1e3a8a;"></div></div><span class="skill-label">ULT</span></div>
+                    </div>
+                </div>
+                <div id="timer" class="timer">99</div>
+                <div class="flex flex-col items-end">
+                    <div class="health-bar-bg"><div id="p2-health-fill" class="health-bar-fill"></div></div>
+                    <div class="skills-row">
+                        <div class="skill-item"><div class="skill-cd-bg"><div id="p2-ultimate-cd" class="skill-cd-fill" style="background: #7f1d1d;"></div></div><span class="skill-label">ULT</span></div>
+                        <div class="skill-item"><div class="skill-cd-bg"><div id="p2-counter-cd" class="skill-cd-fill"></div></div><span class="skill-label">CTR</span></div>
+                        <div class="skill-item"><div class="skill-cd-bg"><div id="p2-slash-cd" class="skill-cd-fill" style="background: #fff;"></div></div><span class="skill-label">ATK</span></div>
+                    </div>
                 </div>
             </div>
-
-            <div id="timer" class="timer-box">99</div>
-
-            <div class="health-container flex flex-col items-end">
-                <div class="health-bar-bg w-full"><div id="p2-health-fill" class="health-bar-fill"></div></div>
-                <div class="flex gap-1 mt-1 w-full">
-                    <div class="flex-1"><div class="skill-icon"><div id="p2-o-cd" class="cd-progress" style="background: #ef4444;"></div></div></div>
-                    <div class="flex-1"><div class="skill-icon"><div id="p2-u-cd" class="cd-progress" style="background: #fbbf24;"></div></div></div>
-                    <div class="flex-1"><div class="skill-icon"><div id="p2-k-cd" class="cd-progress"></div></div></div>
-                </div>
+            <canvas id="gameCanvas"></canvas>
+            <div id="overlay">
+                <h1 id="win-text" class="text-4xl md:text-6xl font-bold mb-10 text-white tracking-widest italic">VICTORY</h1>
+                <button onclick="location.reload()" class="border-2 border-white/40 text-white px-12 py-4 font-bold rounded-full hover:bg-white hover:text-black transition-all uppercase tracking-[0.2em] text-sm">REMATCH</button>
             </div>
         </div>
+    </div>
 
-        <canvas id="gameCanvas"></canvas>
-
-        <!-- Mobile Controls (Auto-detected) -->
-        <div id="mobile-ui" class="mobile-controls">
-            <div class="flex flex-col gap-3">
-                <div class="control-group">
-                    <div class="btn-circle btn-blue" id="btn-p1-a">LEFT</div>
-                    <div class="btn-circle btn-blue" id="btn-p1-w">JUMP</div>
-                    <div class="btn-circle btn-blue" id="btn-p1-d">RIGHT</div>
-                </div>
-                <div class="control-group">
-                    <div class="btn-circle btn-blue" id="btn-p1-dash">DASH</div>
-                    <div class="btn-circle" id="btn-p1-s">SLASH</div>
-                    <div class="btn-circle btn-yellow" id="btn-p1-q">PARRY</div>
-                    <div class="btn-circle btn-red" id="btn-p1-e">ULT</div>
-                </div>
-            </div>
-            
-            <div class="flex flex-col gap-3 items-end">
-                <div class="control-group">
-                    <div class="btn-circle btn-red" id="btn-p2-j">LEFT</div>
-                    <div class="btn-circle btn-red" id="btn-p2-i">JUMP</div>
-                    <div class="btn-circle btn-red" id="btn-p2-l">RIGHT</div>
-                </div>
-                <div class="control-group">
-                    <div class="btn-circle btn-red" id="btn-p2-o">ULT</div>
-                    <div class="btn-circle btn-yellow" id="btn-p2-u">PARRY</div>
-                    <div class="btn-circle" id="btn-p2-k">SLASH</div>
-                    <div class="btn-circle btn-red" id="btn-p2-dash">DASH</div>
-                </div>
-            </div>
+    <!-- Mobile Controls (Will be enabled if touch is detected) -->
+    <div id="mobile-controls">
+        <div class="dpad">
+            <div class="touch-btn h-12 w-12 col-start-2" id="btn-up">↑</div>
+            <div class="touch-btn h-12 w-12 col-start-1" id="btn-left">←</div>
+            <div class="touch-btn h-12 w-12 col-start-3" id="btn-right">→</div>
         </div>
-
-        <div id="overlay">
-            <div class="text-white text-center">
-                <h1 id="win-text" class="text-5xl font-black mb-8 italic">VICTORY</h1>
-                <button onclick="location.reload()" class="bg-white text-black px-12 py-3 font-black hover:bg-blue-500 hover:text-white transition-all">REMATCH</button>
-            </div>
+        <div class="action-btns">
+            <div class="touch-btn h-14 w-14 bg-blue-600/40 border-blue-400" id="btn-counter">C</div>
+            <div class="touch-btn h-14 w-14 bg-red-600/40 border-red-400" id="btn-ult">U</div>
+            <div class="touch-btn h-14 w-14 col-span-2 w-full rounded-xl bg-white/20" id="btn-slash">SLASH</div>
         </div>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 1100;
-        canvas.height = 550;
-
-        // Detection of Touch Device
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        if (isTouchDevice) {
-            document.getElementById('mobile-ui').style.display = 'flex';
-        }
+        
+        // Logical resolution
+        canvas.width = 1000;
+        canvas.height = 500;
 
         const config = {
-            gravity: 0.7,
-            groundY: 480,
-            moveSpeed: 7,
-            dashForce: 18,
-            jumpForce: -16,
-            attackWindup: 180,
-            ultCharge: 1500,
-            slashCD: 800,
-            parryCD: 4000,
-            ultCD: 14000,
-            parryWindow: 350
+            gravity: 0.65,
+            groundY: 450,
+            moveSpeed: 6.5,
+            jumpForce: -15,
+            attackWindupMs: 150,
+            ultChargeMs: 1800,
+            attackCooldownMs: 800,
+            counterWindowMs: 1500,
+            failCounterStunMs: 2000,
+            successCounterStunMs: 1500,
+            ultraStunMs: 10000,
+            counterCooldownMs: 4500,
+            ultCooldownMs: 12000
         };
 
         const keys = {};
         let gameActive = true;
         let timeLeft = 99;
-        let particles = [];
+        let isMobile = false;
 
-        class Particle {
-            constructor(x, y, color, speed) {
-                this.x = x; this.y = y; this.color = color;
-                this.vx = (Math.random() - 0.5) * speed;
-                this.vy = (Math.random() - 0.5) * speed;
-                this.life = 1.0;
-                this.decay = 0.03 + Math.random() * 0.05;
-            }
-            update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 4, 4);
-                ctx.globalAlpha = 1;
-            }
+        // Detect Mobile
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            isMobile = true;
+            document.getElementById('mobile-controls').style.display = 'flex';
         }
 
         class Fighter {
             constructor({ pos, color, id }) {
-                this.id = id; this.pos = pos; this.vel = { x: 0, y: 0 };
-                this.width = 50; this.height = 130; this.color = color;
-                this.health = 100; this.facing = id === 1 ? 1 : -1;
-                this.state = 'idle';
-                this.timer = 0;
-                this.lastCD = { slash: 0, parry: 0, ult: 0 };
-                this.isUlt = false;
-                this.dashCD = 0;
+                this.id = id;
+                this.pos = pos;
+                this.vel = { x: 0, y: 0 };
+                this.width = 60;
+                this.height = 140;
+                this.color = color;
+                this.health = 100;
+                this.facing = id === 1 ? 1 : -1;
+                this.stunned = false;
+                this.stunTimer = 0;
+                this.isAttacking = false;
+                this.attackFrame = 0;
+                this.isWindingUp = false;
+                this.windupStart = 0;
+                this.isChargingUlt = false;
+                this.chargeStart = 0;
+                this.isCountering = false;
+                this.counterStart = 0;
+                this.lastAttackUsed = 0; 
+                this.lastCounterUsed = 0;
+                this.lastUltUsed = 0;
+                this.isUltAction = false;
+                this.animFrame = 0;
+            }
+
+            drawStunAura() {
+                if (!this.stunned) return;
+                const centerX = this.pos.x + this.width/2;
+                const centerY = this.pos.y + this.height/2;
+                const time = Date.now() * 0.01;
+                ctx.save();
+                ctx.lineWidth = 2;
+                for(let i = 0; i < 6; i++) {
+                    ctx.strokeStyle = i % 2 === 0 ? "#64748b" : "#000000";
+                    ctx.beginPath();
+                    let x = centerX + Math.cos(time + i) * 45;
+                    let y = centerY + Math.sin(time * 0.8 + i) * 65;
+                    ctx.moveTo(x, y);
+                    for(let j = 0; j < 4; j++) {
+                        x += (Math.random() - 0.5) * 30;
+                        y += (Math.random() - 0.5) * 30;
+                        ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+                const pulse = (Math.sin(time * 2) + 1) * 5;
+                ctx.shadowBlur = 10 + pulse;
+                ctx.shadowColor = "white";
+                ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                ctx.strokeRect(this.pos.x - 5, this.pos.y - 5, this.width + 10, this.height + 10);
+                ctx.restore();
             }
 
             draw() {
                 ctx.save();
-                ctx.translate(this.pos.x + this.width/2, this.pos.y + this.height/2);
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                this.animFrame += 0.08;
+                this.drawStunAura();
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
                 ctx.beginPath();
-                ctx.ellipse(0, (config.groundY - (this.pos.y + this.height/2)), 45, 12, 0, 0, Math.PI*2);
+                ctx.ellipse(this.pos.x + this.width/2, config.groundY, 50, 10, 0, 0, Math.PI * 2);
                 ctx.fill();
-
-                let bodyColor = this.color;
-                if (this.state === 'stun') bodyColor = '#475569';
-                if (this.state === 'parry') bodyColor = '#fbbf24';
-                if (this.state === 'ult_charge') bodyColor = Math.sin(Date.now()*0.02) > 0 ? '#ff0000' : '#450a0a';
-
-                ctx.fillStyle = bodyColor;
-                ctx.fillRect(-19, -65, 38, 38);
-                ctx.fillStyle = this.state === 'stun' ? '#000' : '#fff';
-                const eyeX = this.facing === 1 ? 8 : -18;
-                ctx.fillRect(eyeX, -53, 10, 5);
-                ctx.fillStyle = bodyColor;
-                ctx.fillRect(-25, -23, 50, 88);
-                this.drawKatana();
+                const centerX = this.pos.x + this.width/2;
+                const baseY = this.pos.y;
+                const armorPlate = "#1a1a1a";
+                const accentColor = this.color; 
+                if (this.isCountering || this.isChargingUlt) {
+                    ctx.shadowBlur = this.isChargingUlt ? 20 : 15;
+                    ctx.shadowColor = accentColor;
+                }
+                ctx.fillStyle = "#111";
+                ctx.fillRect(centerX - 25, baseY + 80, 50, 25);
+                ctx.fillStyle = armorPlate;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 25, baseY + 40); ctx.lineTo(centerX + 25, baseY + 40);
+                ctx.lineTo(centerX + 20, baseY + 90); ctx.lineTo(centerX - 20, baseY + 90);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(centerX, baseY + 25, 15, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = this.stunned ? "#222" : accentColor;
+                ctx.fillRect(centerX + (this.facing === 1 ? 5 : -12), baseY + 20, 8, 3);
+                ctx.fillStyle = armorPlate;
+                ctx.beginPath(); ctx.arc(centerX, baseY + 15, 18, Math.PI, 0); ctx.fill();
+                ctx.fillRect(centerX - 20, baseY + 15, 40, 12);
+                ctx.strokeStyle = accentColor; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(centerX, baseY + 5); ctx.lineTo(centerX - 15, baseY - 15);
+                ctx.moveTo(centerX, baseY + 5); ctx.lineTo(centerX + 15, baseY - 15); ctx.stroke();
+                this.drawArms(centerX, baseY, armorPlate, accentColor);
+                this.drawDaisho(centerX, baseY);
+                if (this.isAttacking) this.drawSlashEffect();
                 ctx.restore();
-                if (this.state === 'attack') this.drawSlashEffect();
             }
 
-            drawKatana() {
-                const isAction = ['attack', 'windup', 'ult_charge'].includes(this.state);
-                const handX = this.facing === 1 ? 25 : -25;
-                const handY = 20;
-
-                ctx.save();
-                if (isAction) {
-                    ctx.translate(handX, handY);
-                    let angle = this.facing === 1 ? -Math.PI/1.2 : Math.PI/1.2;
-                    if (this.state === 'attack') {
-                        const p = (Date.now() - this.timer) / 150;
-                        angle += this.facing * (Math.PI * 1.5 * p);
-                    }
-                    ctx.rotate(angle);
-                    ctx.fillStyle = '#1e293b'; ctx.fillRect(-3, 0, 6, 25);
-                    ctx.fillStyle = this.isUlt ? '#ef4444' : '#fbbf24'; ctx.fillRect(-10, 25, 20, 4);
-                    const bladeGrad = ctx.createLinearGradient(0, 29, 0, 120);
-                    bladeGrad.addColorStop(0, this.isUlt ? '#f87171' : '#f1f5f9');
-                    bladeGrad.addColorStop(1, 'transparent');
-                    ctx.fillStyle = bladeGrad;
-                    ctx.beginPath(); ctx.moveTo(-2, 29); ctx.lineTo(2, 29); ctx.lineTo(0, this.isUlt ? 160 : 100); ctx.fill();
+            drawArms(centerX, baseY, armorColor, accentColor) {
+                const armY = baseY + 50;
+                ctx.fillStyle = armorColor;
+                if (this.isAttacking || this.isWindingUp || this.isChargingUlt) {
+                    const handX = this.facing === 1 ? centerX + 35 : centerX - 35;
+                    const handY = baseY + 75;
+                    ctx.strokeStyle = armorColor; ctx.lineWidth = 12; ctx.lineCap = "round";
+                    ctx.beginPath(); ctx.moveTo(centerX + (this.facing * 15), armY); ctx.lineTo(handX, handY); ctx.stroke();
+                    ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(handX, handY, 7, 0, Math.PI * 2); ctx.fill();
                 } else {
-                    ctx.translate(this.facing === 1 ? -22 : 22, 35);
-                    ctx.rotate(this.facing * Math.PI/6);
-                    ctx.fillStyle = '#000'; ctx.fillRect(this.facing === 1 ? -40 : 0, -3, 40, 7);
-                    ctx.fillStyle = this.state === 'parry' ? '#fbbf24' : '#1e293b';
-                    ctx.fillRect(this.facing === 1 ? -50 : 40, -4, 12, 9);
+                    const swing = Math.sin(this.animFrame) * 3;
+                    ctx.fillRect(centerX - 33, armY + swing, 10, 35); ctx.fillRect(centerX + 23, armY - swing, 10, 35);
                 }
+            }
+
+            drawDaisho(centerX, baseY) {
+                const waistX = this.facing === 1 ? centerX - 10 : centerX + 10;
+                const waistY = baseY + 85;
+                this.drawOneSheathedSword(waistX, waistY + 8, 35, -0.2);
+                if (!(this.isAttacking || this.isWindingUp || this.isChargingUlt)) {
+                    this.drawOneSheathedSword(waistX, waistY, 55, -0.4);
+                } else {
+                    this.drawActiveSword(centerX, baseY);
+                }
+            }
+
+            drawOneSheathedSword(x, y, length, baseAngle) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(this.facing === 1 ? baseAngle : Math.PI - baseAngle);
+                ctx.fillStyle = "#2c1a12"; ctx.fillRect(0, -2.5, length, 5);
+                ctx.restore();
+            }
+
+            drawActiveSword(centerX, baseY) {
+                const handX = this.facing === 1 ? centerX + 35 : centerX - 35;
+                const handY = baseY + 75;
+                let rot = (this.isWindingUp || this.isChargingUlt) ? (this.facing === 1 ? -Math.PI/4 : Math.PI/4) : (this.facing === 1 ? -Math.PI/1.5 + (Math.PI*1.33 * this.attackFrame/15) : Math.PI/1.5 - (Math.PI*1.33 * this.attackFrame/15));
+                ctx.save(); ctx.translate(handX, handY); ctx.rotate(rot);
+                ctx.fillStyle = "#111"; ctx.fillRect(0, -10, 4, 20);
+                const len = this.isUltAction ? 140 : 95;
+                ctx.strokeStyle = (this.isChargingUlt || this.isUltAction) ? this.color : "#d1d5db";
+                ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(4, 0); ctx.quadraticCurveTo(len/2, this.facing === 1 ? -6 : 6, len, 0); ctx.stroke();
                 ctx.restore();
             }
 
             drawSlashEffect() {
-                const p = (Date.now() - this.timer) / 150;
-                const reach = this.isUlt ? 320 : 180;
-                ctx.save();
-                ctx.beginPath();
-                ctx.strokeStyle = this.isUlt ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255,255,255,0.4)';
-                ctx.lineWidth = this.isUlt ? 30 : 10;
-                const cx = this.pos.x + this.width/2;
-                const cy = this.pos.y + this.height/2;
-                const start = this.facing === 1 ? -Math.PI/2 : Math.PI*1.5;
-                ctx.arc(cx, cy, reach, start, start + (this.facing * Math.PI * p * 1.5), this.facing === -1);
-                ctx.stroke();
-                ctx.restore();
+                const progress = this.attackFrame / 15;
+                const reach = this.isUltAction ? 300 : 180;
+                ctx.strokeStyle = this.isUltAction ? this.color : "rgba(255, 255, 255, 0.5)";
+                ctx.lineWidth = this.isUltAction ? 25 : 10; ctx.lineCap = "round";
+                const centerX = this.facing === 1 ? this.pos.x + this.width : this.pos.x;
+                const centerY = this.pos.y + 70;
+                let start = -Math.PI / 1.8, end = this.facing === 1 ? Math.PI / 1.8 : -Math.PI * 1.5;
+                ctx.beginPath(); ctx.arc(centerX, centerY, reach, start, start + (end-start)*progress, this.facing === -1); ctx.stroke();
             }
 
-            update(opp) {
-                const now = Date.now();
-                if (this.state === 'windup' && now > this.timer + config.attackWindup) {
-                    this.state = 'attack'; this.timer = now; this.checkHit(opp);
+            update(opponent) {
+                if (this.stunned && Date.now() > this.stunTimer) this.stunned = false;
+                if (!this.stunned) {
+                    if (this.isCountering && Date.now() - this.counterStart > config.counterWindowMs) {
+                        this.isCountering = false; this.applyStun(config.failCounterStunMs);
+                    } else if (this.isChargingUlt && Date.now() - this.chargeStart > config.ultChargeMs) {
+                        this.isChargingUlt = false; this.isAttacking = true; this.isUltAction = true; this.attackFrame = 0; this.checkHit(opponent);
+                    } else if (this.isWindingUp && Date.now() - this.windupStart > config.attackWindupMs) {
+                        this.isWindingUp = false; this.isAttacking = true; this.attackFrame = 0; this.checkHit(opponent);
+                    }
+                    if (this.isAttacking) { this.attackFrame += 2.5; if (this.attackFrame > 15) { this.isAttacking = false; this.isUltAction = false; } }
+                    this.pos.x += this.vel.x;
                 }
-                if (this.state === 'attack' && now > this.timer + 150) {
-                    this.state = 'idle'; this.isUlt = false;
-                }
-                if (this.state === 'parry' && now > this.timer + config.parryWindow) {
-                    this.state = 'stun'; this.timer = now + 1500;
-                    spawnParticles(this.pos.x + this.width/2, this.pos.y + 40, '#64748b', 10);
-                }
-                if (this.state === 'stun' && now > this.timer) this.state = 'idle';
-                if (this.state === 'ult_charge' && now > this.timer + config.ultCharge) {
-                    this.state = 'attack'; this.isUlt = true; this.timer = now; this.checkHit(opp);
-                }
-
-                if (['idle', 'windup'].includes(this.state)) this.pos.x += this.vel.x;
                 this.pos.y += this.vel.y;
-                if (this.pos.y + this.height >= config.groundY) {
-                    this.pos.y = config.groundY - this.height; this.vel.y = 0;
-                } else this.vel.y += config.gravity;
-
+                if (this.pos.y + this.height >= config.groundY) { this.pos.y = config.groundY - this.height; this.vel.y = 0; }
+                else this.vel.y += config.gravity;
                 this.pos.x = Math.max(0, Math.min(canvas.width - this.width, this.pos.x));
-                if (this.state === 'idle') this.facing = this.pos.x < opp.pos.x ? 1 : -1;
-
-                this.updateUI(now);
-                this.draw();
+                if (opponent && !this.isAttacking && !this.isWindingUp && !this.isChargingUlt && !this.isCountering) this.facing = this.pos.x < opponent.pos.x ? 1 : -1;
+                this.updateUI(); this.draw();
             }
 
-            updateUI(now) {
-                const updateBar = (id, cur, max) => {
-                    const el = document.getElementById(id);
-                    if (el) el.style.width = Math.min(100, ((now - cur) / max) * 100) + '%';
-                };
-                updateBar(`p${this.id}-${this.id===1?'s':'k'}-cd`, this.lastCD.slash, config.slashCD);
-                updateBar(`p${this.id}-${this.id===1?'q':'u'}-cd`, this.lastCD.parry, config.parryCD);
-                updateBar(`p${this.id}-${this.id===1?'e':'o'}-cd`, this.lastCD.ult, config.ultCD);
+            updateUI() {
+                const now = Date.now();
+                document.getElementById(`p${this.id}-slash-cd`).style.width = Math.min(100, ((now - this.lastAttackUsed) / config.attackCooldownMs) * 100) + '%';
+                document.getElementById(`p${this.id}-counter-cd`).style.width = Math.min(100, ((now - this.lastCounterUsed) / config.counterCooldownMs) * 100) + '%';
+                document.getElementById(`p${this.id}-ultimate-cd`).style.width = Math.min(100, ((now - this.lastUltUsed) / config.ultCooldownMs) * 100) + '%';
             }
 
-            attack() {
-                if (this.state !== 'idle' || Date.now() - this.lastCD.slash < config.slashCD) return;
-                this.state = 'windup'; this.timer = Date.now(); this.lastCD.slash = Date.now();
-            }
+            jump() { if (this.pos.y >= config.groundY - this.height) this.vel.y = config.jumpForce; }
+            attack() { if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt || Date.now() - this.lastAttackUsed < config.attackCooldownMs) return; this.isWindingUp = true; this.windupStart = Date.now(); this.lastAttackUsed = Date.now(); }
+            ultimate() { if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt || Date.now() - this.lastUltUsed < config.ultCooldownMs) return; this.isChargingUlt = true; this.chargeStart = Date.now(); this.lastUltUsed = Date.now(); }
+            counter() { if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt || Date.now() - this.lastCounterUsed < config.counterCooldownMs) return; this.isCountering = true; this.counterStart = Date.now(); this.lastCounterUsed = Date.now(); }
+            applyStun(ms) { this.stunned = true; this.stunTimer = Date.now() + ms; this.isAttacking = false; this.isWindingUp = false; this.isCountering = false; this.isChargingUlt = false; this.isUltAction = false; this.vel.x = 0; }
 
-            parry() {
-                if (this.state !== 'idle' || Date.now() - this.lastCD.parry < config.parryCD) return;
-                this.state = 'parry'; this.timer = Date.now(); this.lastCD.parry = Date.now();
-            }
-
-            ult() {
-                if (this.state !== 'idle' || Date.now() - this.lastCD.ult < config.ultCD) return;
-                this.state = 'ult_charge'; this.timer = Date.now(); this.lastCD.ult = Date.now();
-            }
-
-            dash(dir) {
-                if (this.state !== 'idle' || Date.now() < this.dashCD) return;
-                this.pos.x += dir * 120;
-                this.dashCD = Date.now() + 600;
-                spawnParticles(this.pos.x, this.pos.y + this.height - 20, this.color, 15);
-            }
-
-            checkHit(opp) {
-                const reach = this.isUlt ? 320 : 180;
-                const hitX = this.facing === 1 ? this.pos.x + this.width : this.pos.x - reach;
-                if (hitX < opp.pos.x + opp.width && hitX + reach > opp.pos.x) {
-                    if (opp.state === 'parry') {
-                        this.state = 'stun'; this.timer = Date.now() + (this.isUlt ? 6000 : 2000);
-                        opp.state = 'idle'; opp.lastCD.parry = 0;
-                        showNotice("PARRIED", "text-yellow-400");
-                        screenShake(20);
-                        spawnParticles(opp.pos.x, opp.pos.y + 50, '#fbbf24', 30);
+            checkHit(opponent) {
+                const reach = this.isUltAction ? 300 : 180;
+                const atkX = this.facing === 1 ? this.pos.x + this.width : this.pos.x - reach;
+                if (atkX < opponent.pos.x + opponent.width && atkX + reach > opponent.pos.x && this.pos.y - 20 < opponent.pos.y + opponent.height && this.pos.y + this.height + 20 > opponent.pos.y) {
+                    if (opponent.isCountering) {
+                        this.applyStun(this.isUltAction ? config.ultraStunMs : config.successCounterStunMs);
+                        showNotice(this.isUltAction ? "ULTIMATE PARRIED!" : "PARRIED!", opponent.color);
+                        opponent.isCountering = false; opponent.lastCounterUsed = 0;
                     } else {
-                        opp.health -= this.isUlt ? 45 : 15;
-                        opp.state = 'stun'; opp.timer = Date.now() + 300;
-                        screenShake(this.isUlt ? 25 : 8);
-                        spawnParticles(opp.pos.x + opp.width/2, opp.pos.y + 60, opp.color, 20);
+                        opponent.health -= this.isUltAction ? 55 : 18;
+                        opponent.applyStun(this.isUltAction ? 1200 : 250);
+                        canvas.style.transform = `translate(${Math.random()*15-7.5}px, ${Math.random()*15-7.5}px)`;
+                        setTimeout(() => canvas.style.transform = 'none', 120);
                     }
                 }
             }
         }
 
-        const p1 = new Fighter({ pos: { x: 200, y: 0 }, color: '#3b82f6', id: 1 });
-        const p2 = new Fighter({ pos: { x: 850, y: 0 }, color: '#ef4444', id: 2 });
+        const p1 = new Fighter({ pos: { x: 150, y: 0 }, color: '#3b82f6', id: 1 });
+        const p2 = new Fighter({ pos: { x: 800, y: 0 }, color: '#ef4444', id: 2 });
 
-        function spawnParticles(x, y, color, count) {
-            for(let i=0; i<count; i++) particles.push(new Particle(x, y, color, 8));
+        function showNotice(text, color) {
+            const el = document.getElementById('notice-display'); el.innerHTML = text; el.style.color = color; el.style.textShadow = `0 0 20px ${color}`; el.style.opacity = '1';
+            setTimeout(() => { if(gameActive) el.style.opacity = '0'; }, 2000);
         }
 
-        function screenShake(amt) {
-            const container = document.getElementById('game-container');
-            container.style.transform = `translate(${(Math.random()-0.5)*amt}px, ${(Math.random()-0.5)*amt}px)`;
-            setTimeout(() => container.style.transform = 'none', 100);
-        }
-
-        function showNotice(text, cls) {
-            const el = document.getElementById('notice-display');
-            el.innerText = text; el.className = `absolute ${cls}`; el.style.opacity = '1';
-            setTimeout(() => el.style.opacity = '0', 1000);
-        }
-
-        function drawBackground() {
-            ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
-            for(let i=0; i<canvas.width; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
-            for(let i=0; i<canvas.height; i+=50) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
-            ctx.fillStyle = '#1e293b'; ctx.fillRect(0, config.groundY, canvas.width, canvas.height - config.groundY);
+        function endGame(text) {
+            gameActive = false; document.getElementById('win-text').innerText = text; document.getElementById('overlay').style.display = 'flex';
         }
 
         function handleInput() {
             if (!gameActive) return;
-            p1.vel.x = 0;
-            if (['idle', 'windup'].includes(p1.state)) {
-                if (keys['a']) p1.vel.x = -config.moveSpeed;
-                if (keys['d']) p1.vel.x = config.moveSpeed;
+            p1.vel.x = 0; p2.vel.x = 0;
+            // P1
+            if (!p1.stunned && !p1.isWindingUp && !p1.isChargingUlt && !p1.isCountering) {
+                if (keys['a'] || keys['left_touch']) p1.vel.x = -config.moveSpeed;
+                if (keys['d'] || keys['right_touch']) p1.vel.x = config.moveSpeed;
             }
-            p2.vel.x = 0;
-            if (['idle', 'windup'].includes(p2.state)) {
-                if (keys['j']) p2.vel.x = -config.moveSpeed;
-                if (keys['l']) p2.vel.x = config.moveSpeed;
+            // P2 (Keyboard only for second player in this hybrid version)
+            if (!p2.stunned && !p2.isWindingUp && !p2.isChargingUlt && !p2.isCountering) {
+                if (keys['j'] || keys['arrowleft']) p2.vel.x = -config.moveSpeed;
+                if (keys['l'] || keys['arrowright']) p2.vel.x = config.moveSpeed;
             }
         }
 
         function gameLoop() {
             if (!gameActive) return;
-            drawBackground();
-            handleInput();
-            particles = particles.filter(p => { p.update(); p.draw(); return p.life > 0; });
-            p1.update(p2); p2.update(p1);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            handleInput(); p1.update(p2); p2.update(p1);
+            document.getElementById('p1-health-fill').style.width = Math.max(0, p1.health) + '%';
+            document.getElementById('p2-health-fill').style.width = Math.max(0, p2.health) + '%';
             if (p1.health <= 0) endGame("PLAYER 2 VICTORIOUS");
             else if (p2.health <= 0) endGame("PLAYER 1 VICTORIOUS");
             requestAnimationFrame(gameLoop);
         }
 
-        function endGame(msg) {
-            gameActive = false;
-            document.getElementById('win-text').innerText = msg;
-            document.getElementById('overlay').style.display = 'flex';
-        }
-
-        // --- Mobile Logic Helper ---
-        function setupMobileBtn(id, key, action) {
-            const btn = document.getElementById(id);
-            if(!btn) return;
-            const start = (e) => { 
-                e.preventDefault(); 
-                keys[key] = true; 
-                if (action) action();
-            };
-            const end = (e) => { e.preventDefault(); keys[key] = false; };
-            btn.addEventListener('touchstart', start);
-            btn.addEventListener('touchend', end);
-            btn.addEventListener('mousedown', start);
-            btn.addEventListener('mouseup', end);
-        }
-
-        // P1 Controls
-        setupMobileBtn('btn-p1-a', 'a');
-        setupMobileBtn('btn-p1-d', 'd');
-        setupMobileBtn('btn-p1-w', 'w', () => { if(p1.pos.y >= config.groundY - p1.height) p1.vel.y = config.jumpForce; });
-        setupMobileBtn('btn-p1-s', 's', () => p1.attack());
-        setupMobileBtn('btn-p1-q', 'q', () => p1.parry());
-        setupMobileBtn('btn-p1-e', 'e', () => p1.ult());
-        setupMobileBtn('btn-p1-dash', 'shift', () => p1.dash(keys['a'] ? -1 : 1));
-
-        // P2 Controls
-        setupMobileBtn('btn-p2-j', 'j');
-        setupMobileBtn('btn-p2-l', 'l');
-        setupMobileBtn('btn-p2-i', 'i', () => { if(p2.pos.y >= config.groundY - p2.height) p2.vel.y = config.jumpForce; });
-        setupMobileBtn('btn-p2-k', 'k', () => p2.attack());
-        setupMobileBtn('btn-p2-u', 'u', () => p2.parry());
-        setupMobileBtn('btn-p2-o', 'o', () => p2.ult());
-        setupMobileBtn('btn-p2-dash', ' ', () => p2.dash(keys['j'] ? -1 : 1));
-
-        // Keyboard Support
-        window.addEventListener('keydown', e => { 
-            const k = e.key.toLowerCase();
-            keys[k] = true; 
-            if (k === 'w' && p1.pos.y >= config.groundY - p1.height) p1.vel.y = config.jumpForce;
-            if (k === 's') p1.attack(); if (k === 'q') p1.parry(); if (k === 'e') p1.ult();
-            if (e.code === 'ShiftLeft') p1.dash(keys['a'] ? -1 : 1);
-            if (k === 'i' && p2.pos.y >= config.groundY - p2.height) p2.vel.y = config.jumpForce;
-            if (k === 'k') p2.attack(); if (k === 'u') p2.parry(); if (k === 'o') p2.ult();
-            if (e.code === 'Space') p2.dash(keys['j'] ? -1 : 1);
+        // Keyboard Listeners
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase(); keys[k] = true;
+            if (k === 'w') p1.jump();
+            if (k === 'i' || k === 'arrowup') p2.jump();
+            if (k === 's') p1.attack(); if (k === 'q') p1.counter(); if (k === 'e') p1.ultimate();
+            if (k === 'k') p2.attack(); if (k === 'u') p2.counter(); if (k === 'o') p2.ultimate();
         });
-        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+        // Touch Listeners (for Player 1)
+        const setupTouch = (id, keyName) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+        };
+
+        if (isMobile) {
+            setupTouch('btn-left', 'left_touch');
+            setupTouch('btn-right', 'right_touch');
+            document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); p1.jump(); });
+            document.getElementById('btn-slash').addEventListener('touchstart', (e) => { e.preventDefault(); p1.attack(); });
+            document.getElementById('btn-counter').addEventListener('touchstart', (e) => { e.preventDefault(); p1.counter(); });
+            document.getElementById('btn-ult').addEventListener('touchstart', (e) => { e.preventDefault(); p1.ultimate(); });
+        }
 
         setInterval(() => { if (gameActive) { timeLeft--; document.getElementById('timer').innerText = timeLeft; if (timeLeft <= 0) endGame("DRAW"); } }, 1000);
         gameLoop();
