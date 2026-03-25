@@ -1,573 +1,278 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hybrid Duel - Shadow Samurai Edition</title>
+    <title>15 Sliding Block Puzzle</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Kanit:wght@300;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap');
         
         body {
-            margin: 0;
-            background-color: #020617;
-            color: white;
-            font-family: 'Kanit', sans-serif;
+            font-family: 'Prompt', sans-serif;
+            background-color: #f0f2f5;
+            touch-action: none; 
             overflow: hidden;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            touch-action: none; /* ป้องกันการซูมหรือเลื่อนหน้าจอขณะเล่น */
-        }
-
-        #game-wrap {
-            position: relative;
-            width: 100%;
-            max-width: 1000px;
-            aspect-ratio: 2 / 1;
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            border: 2px solid #1e293b;
-            background: radial-gradient(circle, #0f172a 0%, #020617 100%);
-            box-shadow: 0 0 100px rgba(0,0,0,0.5);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        /* HUD Styles */
-        .hud {
-            position: absolute;
-            top: 15px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            pointer-events: none;
-            font-family: 'Orbitron', sans-serif;
-            z-index: 20;
-        }
-
-        .health-bar-bg {
-            width: clamp(100px, 30vw, 320px);
-            height: 12px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .health-bar-fill {
-            height: 100%;
-            width: 100%;
-            transition: width 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-        }
-
-        #p1-health-fill { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
-        #p2-health-fill { background: linear-gradient(90deg, #b91c1c, #ef4444); }
-
-        .skills-row {
-            display: flex;
-            gap: 5px;
-            margin-top: 8px;
-            width: 100%;
-        }
-
-        .skill-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .skill-cd-bg {
-            height: 4px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 1px;
-            overflow: hidden;
-        }
-
-        .skill-cd-fill {
-            height: 100%;
-            width: 100%;
-            transition: width 0.1s linear;
-        }
-
-        #p1-counter-cd { background: #3b82f6; }
-        #p2-counter-cd { background: #ef4444; }
-
-        .skill-label {
-            font-size: 7px;
-            letter-spacing: 0.1em;
-            color: #64748b;
-            text-align: center;
-            font-weight: 700;
-        }
-
-        .timer {
-            font-size: 24px;
-            color: #f8fafc;
-            border-bottom: 2px solid #64748b;
-            padding: 0 10px;
-        }
-
-        #notice-display {
-            position: absolute;
-            top: 25%;
-            left: 50%;
-            transform: translateX(-50%);
-            font-weight: bold;
-            font-size: clamp(18px, 5vw, 32px);
-            font-family: 'Orbitron', sans-serif;
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-            z-index: 30;
-            text-align: center;
-        }
-
-        /* Mobile Controls */
-        #mobile-controls {
-            display: none; /* แสดงผลเฉพาะบนมือถือด้วย JS */
-            position: fixed;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            height: 160px;
-            padding: 0 20px;
-            justify-content: space-between;
-            align-items: flex-end;
-            z-index: 50;
-            pointer-events: none;
-        }
-
-        .touch-btn {
-            pointer-events: auto;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
             justify-content: center;
-            align-items: center;
+            min-h-screen;
+        }
+
+        .puzzle-container {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            background-color: #bbada0;
+            padding: 12px;
+            border-radius: 12px;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            touch-action: none;
         }
 
-        .touch-btn:active {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(0.9);
-        }
-
-        .dpad {
-            display: grid;
-            grid-template-columns: repeat(3, 50px);
-            grid-template-rows: repeat(2, 50px);
-            gap: 10px;
-        }
-
-        .action-btns {
-            display: grid;
-            grid-template-columns: repeat(2, 60px);
-            grid-template-rows: repeat(2, 60px);
-            gap: 15px;
-        }
-
-        #overlay {
+        .tile {
             position: absolute;
-            inset: 0;
-            background: rgba(2, 6, 23, 0.9);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
+            width: 70px;
+            height: 70px;
+            background-color: #eee4da;
+            color: #776e65;
+            display: flex;
             align-items: center;
-            z-index: 100;
-            backdrop-filter: blur(5px);
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: grab;
+            transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.2s ease;
+            box-shadow: 0 4px 0px rgba(0,0,0,0.1);
+            z-index: 10;
         }
 
-        .instructions {
-            margin-bottom: 10px;
-            text-align: center;
+        .tile:active {
+            cursor: grabbing;
+            filter: brightness(0.95);
         }
-        
-        @media (max-width: 768px) {
-            .instructions { display: none; }
+
+        .tile.correct {
+            background-color: #edc22e;
+            color: white;
+        }
+
+        .grid-placeholder {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background-color: rgba(238, 228, 218, 0.35);
+            border-radius: 8px;
+        }
+
+        @media (max-width: 380px) {
+            .puzzle-container {
+                width: 300px;
+                height: 300px;
+                padding: 10px;
+            }
+            .tile, .grid-placeholder {
+                width: 62px;
+                height: 62px;
+            }
+            .tile { font-size: 24px; }
         }
     </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-    <div class="instructions mb-4 flex gap-32 text-center">
-        <div class="text-blue-400">
-            <p class="font-bold text-lg uppercase tracking-widest">P1 SHADOW</p>
-            <p class="text-[10px] text-gray-500">WASD: Move/Jump | S: Slash | Q: Counter | E: Ult</p>
-        </div>
-        <div class="text-red-400">
-            <p class="font-bold text-lg uppercase tracking-widest">P2 BLADE</p>
-            <p class="text-[10px] text-gray-500">Arrows: Move/Jump | K: Slash | U: Counter | O: Ult</p>
+    <h1 class="text-4xl font-bold mb-6 text-[#776e65]">15 Puzzle</h1>
+
+    <div id="puzzle-board" class="puzzle-container mb-8">
+        <!-- Generated by JS -->
+    </div>
+
+    <div class="flex flex-col items-center gap-6">
+        <button id="reset-btn" class="bg-[#8f7a66] hover:bg-[#776e65] text-white px-10 py-3 rounded-full font-semibold transition-all shadow-lg active:scale-95">
+            เริ่มเกมใหม่
+        </button>
+
+        <div class="text-[#776e65] text-center space-y-2 max-w-xs">
+            <p class="font-bold text-lg">การควบคุม</p>
+            <p class="bg-white/50 px-4 py-2 rounded-lg border border-gray-200 text-sm">
+                ลากบล็อคไปยังช่องว่างเพื่อเลื่อนให้ตรงช่อง
+            </p>
         </div>
     </div>
 
-    <div id="game-wrap">
-        <div id="game-container">
-            <div id="notice-display">PARRIED!</div>
-            <div class="hud">
-                <div class="flex flex-col">
-                    <div class="health-bar-bg"><div id="p1-health-fill" class="health-bar-fill"></div></div>
-                    <div class="skills-row">
-                        <div class="skill-item"><div class="skill-cd-bg"><div id="p1-slash-cd" class="skill-cd-fill" style="background: #fff;"></div></div><span class="skill-label">ATK</span></div>
-                        <div class="skill-item"><div class="skill-cd-bg"><div id="p1-counter-cd" class="skill-cd-fill"></div></div><span class="skill-label">CTR</span></div>
-                        <div class="skill-item"><div class="skill-cd-bg"><div id="p1-ultimate-cd" class="skill-cd-fill" style="background: #1e3a8a;"></div></div><span class="skill-label">ULT</span></div>
-                    </div>
-                </div>
-                <div id="timer" class="timer">99</div>
-                <div class="flex flex-col items-end">
-                    <div class="health-bar-bg"><div id="p2-health-fill" class="health-bar-fill"></div></div>
-                    <div class="skills-row">
-                        <div class="skill-item"><div class="skill-cd-bg"><div id="p2-ultimate-cd" class="skill-cd-fill" style="background: #7f1d1d;"></div></div><span class="skill-label">ULT</span></div>
-                        <div class="skill-item"><div class="skill-cd-bg"><div id="p2-counter-cd" class="skill-cd-fill"></div></div><span class="skill-label">CTR</span></div>
-                        <div class="skill-item"><div class="skill-cd-bg"><div id="p2-slash-cd" class="skill-cd-fill" style="background: #fff;"></div></div><span class="skill-label">ATK</span></div>
-                    </div>
-                </div>
-            </div>
-            <canvas id="gameCanvas"></canvas>
-            <div id="overlay">
-                <h1 id="win-text" class="text-4xl md:text-6xl font-bold mb-10 text-white tracking-widest italic">VICTORY</h1>
-                <button onclick="location.reload()" class="border-2 border-white/40 text-white px-12 py-4 font-bold rounded-full hover:bg-white hover:text-black transition-all uppercase tracking-[0.2em] text-sm">REMATCH</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mobile Controls (Will be enabled if touch is detected) -->
-    <div id="mobile-controls">
-        <div class="dpad">
-            <div class="touch-btn h-12 w-12 col-start-2" id="btn-up">↑</div>
-            <div class="touch-btn h-12 w-12 col-start-1" id="btn-left">←</div>
-            <div class="touch-btn h-12 w-12 col-start-3" id="btn-right">→</div>
-        </div>
-        <div class="action-btns">
-            <div class="touch-btn h-14 w-14 bg-blue-600/40 border-blue-400" id="btn-counter">C</div>
-            <div class="touch-btn h-14 w-14 bg-red-600/40 border-red-400" id="btn-ult">U</div>
-            <div class="touch-btn h-14 w-14 col-span-2 w-full rounded-xl bg-white/20" id="btn-slash">SLASH</div>
+    <!-- Win Message -->
+    <div id="win-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-sm w-full mx-4">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">คุณชนะแล้ว!</h2>
+            <button onclick="initGame()" class="w-full bg-[#edc22e] hover:bg-[#e2b000] text-white py-4 rounded-2xl font-bold text-xl transition-all shadow-md active:scale-95">
+                เล่นอีกครั้ง
+            </button>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        let TILE_SIZE, GAP, PADDING;
+
+        function updateDimensions() {
+            if (window.innerWidth <= 380) {
+                TILE_SIZE = 62; GAP = 10; PADDING = 10;
+            } else {
+                TILE_SIZE = 70; GAP = 12; PADDING = 12;
+            }
+        }
+
+        let tiles = []; 
+        let emptyPos = 15; 
+        let dragStartX = 0, dragStartY = 0, isDragging = false;
         
-        // Logical resolution
-        canvas.width = 1000;
-        canvas.height = 500;
+        const board = document.getElementById('puzzle-board');
+        const winModal = document.getElementById('win-modal');
 
-        const config = {
-            gravity: 0.65,
-            groundY: 450,
-            moveSpeed: 6.5,
-            jumpForce: -15,
-            attackWindupMs: 150,
-            ultChargeMs: 1800,
-            attackCooldownMs: 800,
-            counterWindowMs: 1500,
-            failCounterStunMs: 2000,
-            successCounterStunMs: 1500,
-            ultraStunMs: 10000,
-            counterCooldownMs: 4500,
-            ultCooldownMs: 12000
-        };
-
-        const keys = {};
-        let gameActive = true;
-        let timeLeft = 99;
-        let isMobile = false;
-
-        // Detect Mobile
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            isMobile = true;
-            document.getElementById('mobile-controls').style.display = 'flex';
+        function getCoords(index) {
+            const row = Math.floor(index / 4);
+            const col = index % 4;
+            return {
+                x: PADDING + col * (TILE_SIZE + GAP),
+                y: PADDING + row * (TILE_SIZE + GAP)
+            };
         }
 
-        class Fighter {
-            constructor({ pos, color, id }) {
-                this.id = id;
-                this.pos = pos;
-                this.vel = { x: 0, y: 0 };
-                this.width = 60;
-                this.height = 140;
-                this.color = color;
-                this.health = 100;
-                this.facing = id === 1 ? 1 : -1;
-                this.stunned = false;
-                this.stunTimer = 0;
-                this.isAttacking = false;
-                this.attackFrame = 0;
-                this.isWindingUp = false;
-                this.windupStart = 0;
-                this.isChargingUlt = false;
-                this.chargeStart = 0;
-                this.isCountering = false;
-                this.counterStart = 0;
-                this.lastAttackUsed = 0; 
-                this.lastCounterUsed = 0;
-                this.lastUltUsed = 0;
-                this.isUltAction = false;
-                this.animFrame = 0;
+        function initGame() {
+            updateDimensions();
+            board.innerHTML = '';
+            tiles = [];
+            
+            // Background grid
+            for (let i = 0; i < 16; i++) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'grid-placeholder';
+                const coords = getCoords(i);
+                placeholder.style.left = `${coords.x}px`;
+                placeholder.style.top = `${coords.y}px`;
+                board.appendChild(placeholder);
             }
 
-            drawStunAura() {
-                if (!this.stunned) return;
-                const centerX = this.pos.x + this.width/2;
-                const centerY = this.pos.y + this.height/2;
-                const time = Date.now() * 0.01;
-                ctx.save();
-                ctx.lineWidth = 2;
-                for(let i = 0; i < 6; i++) {
-                    ctx.strokeStyle = i % 2 === 0 ? "#64748b" : "#000000";
-                    ctx.beginPath();
-                    let x = centerX + Math.cos(time + i) * 45;
-                    let y = centerY + Math.sin(time * 0.8 + i) * 65;
-                    ctx.moveTo(x, y);
-                    for(let j = 0; j < 4; j++) {
-                        x += (Math.random() - 0.5) * 30;
-                        y += (Math.random() - 0.5) * 30;
-                        ctx.lineTo(x, y);
-                    }
-                    ctx.stroke();
+            let indices;
+            do {
+                indices = [...Array(16).keys()];
+                for (let i = indices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [indices[i], indices[j]] = [indices[j], indices[i]];
                 }
-                const pulse = (Math.sin(time * 2) + 1) * 5;
-                ctx.shadowBlur = 10 + pulse;
-                ctx.shadowColor = "white";
-                ctx.strokeStyle = "rgba(255,255,255,0.3)";
-                ctx.strokeRect(this.pos.x - 5, this.pos.y - 5, this.width + 10, this.height + 10);
-                ctx.restore();
-            }
+            } while (!isSolvable(indices) || isSolved(indices));
 
-            draw() {
-                ctx.save();
-                this.animFrame += 0.08;
-                this.drawStunAura();
-                ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                ctx.beginPath();
-                ctx.ellipse(this.pos.x + this.width/2, config.groundY, 50, 10, 0, 0, Math.PI * 2);
-                ctx.fill();
-                const centerX = this.pos.x + this.width/2;
-                const baseY = this.pos.y;
-                const armorPlate = "#1a1a1a";
-                const accentColor = this.color; 
-                if (this.isCountering || this.isChargingUlt) {
-                    ctx.shadowBlur = this.isChargingUlt ? 20 : 15;
-                    ctx.shadowColor = accentColor;
-                }
-                ctx.fillStyle = "#111";
-                ctx.fillRect(centerX - 25, baseY + 80, 50, 25);
-                ctx.fillStyle = armorPlate;
-                ctx.beginPath();
-                ctx.moveTo(centerX - 25, baseY + 40); ctx.lineTo(centerX + 25, baseY + 40);
-                ctx.lineTo(centerX + 20, baseY + 90); ctx.lineTo(centerX - 20, baseY + 90);
-                ctx.closePath(); ctx.fill();
-                ctx.fillStyle = "#000";
-                ctx.beginPath(); ctx.arc(centerX, baseY + 25, 15, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = this.stunned ? "#222" : accentColor;
-                ctx.fillRect(centerX + (this.facing === 1 ? 5 : -12), baseY + 20, 8, 3);
-                ctx.fillStyle = armorPlate;
-                ctx.beginPath(); ctx.arc(centerX, baseY + 15, 18, Math.PI, 0); ctx.fill();
-                ctx.fillRect(centerX - 20, baseY + 15, 40, 12);
-                ctx.strokeStyle = accentColor; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.moveTo(centerX, baseY + 5); ctx.lineTo(centerX - 15, baseY - 15);
-                ctx.moveTo(centerX, baseY + 5); ctx.lineTo(centerX + 15, baseY - 15); ctx.stroke();
-                this.drawArms(centerX, baseY, armorPlate, accentColor);
-                this.drawDaisho(centerX, baseY);
-                if (this.isAttacking) this.drawSlashEffect();
-                ctx.restore();
-            }
+            emptyPos = indices.indexOf(15); 
 
-            drawArms(centerX, baseY, armorColor, accentColor) {
-                const armY = baseY + 50;
-                ctx.fillStyle = armorColor;
-                if (this.isAttacking || this.isWindingUp || this.isChargingUlt) {
-                    const handX = this.facing === 1 ? centerX + 35 : centerX - 35;
-                    const handY = baseY + 75;
-                    ctx.strokeStyle = armorColor; ctx.lineWidth = 12; ctx.lineCap = "round";
-                    ctx.beginPath(); ctx.moveTo(centerX + (this.facing * 15), armY); ctx.lineTo(handX, handY); ctx.stroke();
-                    ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(handX, handY, 7, 0, Math.PI * 2); ctx.fill();
+            indices.forEach((valIdx, boardPos) => {
+                if (boardPos === emptyPos) return;
+
+                const val = valIdx + 1;
+                const tileDiv = document.createElement('div');
+                tileDiv.className = 'tile';
+                tileDiv.textContent = val;
+                
+                const startEvent = (e) => {
+                    const clientX = e.clientX || e.touches[0].clientX;
+                    const clientY = e.clientY || e.touches[0].clientY;
+                    dragStartX = clientX;
+                    dragStartY = clientY;
+                    isDragging = true;
+                };
+
+                tileDiv.addEventListener('mousedown', startEvent);
+                tileDiv.addEventListener('touchstart', startEvent, {passive: true});
+
+                const tileObj = { value: val, element: tileDiv, currentPos: boardPos };
+                tiles.push(tileObj);
+                board.appendChild(tileDiv);
+                updateTilePosition(tileObj);
+            });
+
+            winModal.classList.add('hidden');
+        }
+
+        function handleMove(clientX, clientY) {
+            if (!isDragging) return;
+            
+            const diffX = clientX - dragStartX;
+            const diffY = clientY - dragStartY;
+            const threshold = 35; 
+
+            if (Math.abs(diffX) > threshold || Math.abs(diffY) > threshold) {
+                isDragging = false; 
+                
+                const row = Math.floor(emptyPos / 4);
+                const col = emptyPos % 4;
+                let targetPos = -1;
+
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    // horizontal
+                    if (diffX > 0 && col > 0) targetPos = emptyPos - 1; // Drag right
+                    else if (diffX < 0 && col < 3) targetPos = emptyPos + 1; // Drag left
                 } else {
-                    const swing = Math.sin(this.animFrame) * 3;
-                    ctx.fillRect(centerX - 33, armY + swing, 10, 35); ctx.fillRect(centerX + 23, armY - swing, 10, 35);
+                    // vertical
+                    if (diffY > 0 && row > 0) targetPos = emptyPos - 4; // Drag down
+                    else if (diffY < 0 && row < 3) targetPos = emptyPos + 4; // Drag up
                 }
-            }
 
-            drawDaisho(centerX, baseY) {
-                const waistX = this.facing === 1 ? centerX - 10 : centerX + 10;
-                const waistY = baseY + 85;
-                this.drawOneSheathedSword(waistX, waistY + 8, 35, -0.2);
-                if (!(this.isAttacking || this.isWindingUp || this.isChargingUlt)) {
-                    this.drawOneSheathedSword(waistX, waistY, 55, -0.4);
-                } else {
-                    this.drawActiveSword(centerX, baseY);
-                }
-            }
-
-            drawOneSheathedSword(x, y, length, baseAngle) {
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(this.facing === 1 ? baseAngle : Math.PI - baseAngle);
-                ctx.fillStyle = "#2c1a12"; ctx.fillRect(0, -2.5, length, 5);
-                ctx.restore();
-            }
-
-            drawActiveSword(centerX, baseY) {
-                const handX = this.facing === 1 ? centerX + 35 : centerX - 35;
-                const handY = baseY + 75;
-                let rot = (this.isWindingUp || this.isChargingUlt) ? (this.facing === 1 ? -Math.PI/4 : Math.PI/4) : (this.facing === 1 ? -Math.PI/1.5 + (Math.PI*1.33 * this.attackFrame/15) : Math.PI/1.5 - (Math.PI*1.33 * this.attackFrame/15));
-                ctx.save(); ctx.translate(handX, handY); ctx.rotate(rot);
-                ctx.fillStyle = "#111"; ctx.fillRect(0, -10, 4, 20);
-                const len = this.isUltAction ? 140 : 95;
-                ctx.strokeStyle = (this.isChargingUlt || this.isUltAction) ? this.color : "#d1d5db";
-                ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(4, 0); ctx.quadraticCurveTo(len/2, this.facing === 1 ? -6 : 6, len, 0); ctx.stroke();
-                ctx.restore();
-            }
-
-            drawSlashEffect() {
-                const progress = this.attackFrame / 15;
-                const reach = this.isUltAction ? 300 : 180;
-                ctx.strokeStyle = this.isUltAction ? this.color : "rgba(255, 255, 255, 0.5)";
-                ctx.lineWidth = this.isUltAction ? 25 : 10; ctx.lineCap = "round";
-                const centerX = this.facing === 1 ? this.pos.x + this.width : this.pos.x;
-                const centerY = this.pos.y + 70;
-                let start = -Math.PI / 1.8, end = this.facing === 1 ? Math.PI / 1.8 : -Math.PI * 1.5;
-                ctx.beginPath(); ctx.arc(centerX, centerY, reach, start, start + (end-start)*progress, this.facing === -1); ctx.stroke();
-            }
-
-            update(opponent) {
-                if (this.stunned && Date.now() > this.stunTimer) this.stunned = false;
-                if (!this.stunned) {
-                    if (this.isCountering && Date.now() - this.counterStart > config.counterWindowMs) {
-                        this.isCountering = false; this.applyStun(config.failCounterStunMs);
-                    } else if (this.isChargingUlt && Date.now() - this.chargeStart > config.ultChargeMs) {
-                        this.isChargingUlt = false; this.isAttacking = true; this.isUltAction = true; this.attackFrame = 0; this.checkHit(opponent);
-                    } else if (this.isWindingUp && Date.now() - this.windupStart > config.attackWindupMs) {
-                        this.isWindingUp = false; this.isAttacking = true; this.attackFrame = 0; this.checkHit(opponent);
-                    }
-                    if (this.isAttacking) { this.attackFrame += 2.5; if (this.attackFrame > 15) { this.isAttacking = false; this.isUltAction = false; } }
-                    this.pos.x += this.vel.x;
-                }
-                this.pos.y += this.vel.y;
-                if (this.pos.y + this.height >= config.groundY) { this.pos.y = config.groundY - this.height; this.vel.y = 0; }
-                else this.vel.y += config.gravity;
-                this.pos.x = Math.max(0, Math.min(canvas.width - this.width, this.pos.x));
-                if (opponent && !this.isAttacking && !this.isWindingUp && !this.isChargingUlt && !this.isCountering) this.facing = this.pos.x < opponent.pos.x ? 1 : -1;
-                this.updateUI(); this.draw();
-            }
-
-            updateUI() {
-                const now = Date.now();
-                document.getElementById(`p${this.id}-slash-cd`).style.width = Math.min(100, ((now - this.lastAttackUsed) / config.attackCooldownMs) * 100) + '%';
-                document.getElementById(`p${this.id}-counter-cd`).style.width = Math.min(100, ((now - this.lastCounterUsed) / config.counterCooldownMs) * 100) + '%';
-                document.getElementById(`p${this.id}-ultimate-cd`).style.width = Math.min(100, ((now - this.lastUltUsed) / config.ultCooldownMs) * 100) + '%';
-            }
-
-            jump() { if (this.pos.y >= config.groundY - this.height) this.vel.y = config.jumpForce; }
-            attack() { if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt || Date.now() - this.lastAttackUsed < config.attackCooldownMs) return; this.isWindingUp = true; this.windupStart = Date.now(); this.lastAttackUsed = Date.now(); }
-            ultimate() { if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt || Date.now() - this.lastUltUsed < config.ultCooldownMs) return; this.isChargingUlt = true; this.chargeStart = Date.now(); this.lastUltUsed = Date.now(); }
-            counter() { if (this.stunned || this.isAttacking || this.isWindingUp || this.isCountering || this.isChargingUlt || Date.now() - this.lastCounterUsed < config.counterCooldownMs) return; this.isCountering = true; this.counterStart = Date.now(); this.lastCounterUsed = Date.now(); }
-            applyStun(ms) { this.stunned = true; this.stunTimer = Date.now() + ms; this.isAttacking = false; this.isWindingUp = false; this.isCountering = false; this.isChargingUlt = false; this.isUltAction = false; this.vel.x = 0; }
-
-            checkHit(opponent) {
-                const reach = this.isUltAction ? 300 : 180;
-                const atkX = this.facing === 1 ? this.pos.x + this.width : this.pos.x - reach;
-                if (atkX < opponent.pos.x + opponent.width && atkX + reach > opponent.pos.x && this.pos.y - 20 < opponent.pos.y + opponent.height && this.pos.y + this.height + 20 > opponent.pos.y) {
-                    if (opponent.isCountering) {
-                        this.applyStun(this.isUltAction ? config.ultraStunMs : config.successCounterStunMs);
-                        showNotice(this.isUltAction ? "ULTIMATE PARRIED!" : "PARRIED!", opponent.color);
-                        opponent.isCountering = false; opponent.lastCounterUsed = 0;
-                    } else {
-                        opponent.health -= this.isUltAction ? 55 : 18;
-                        opponent.applyStun(this.isUltAction ? 1200 : 250);
-                        canvas.style.transform = `translate(${Math.random()*15-7.5}px, ${Math.random()*15-7.5}px)`;
-                        setTimeout(() => canvas.style.transform = 'none', 120);
+                if (targetPos !== -1) {
+                    const tile = tiles.find(t => t.currentPos === targetPos);
+                    if (tile) {
+                        const oldEmpty = emptyPos;
+                        emptyPos = targetPos;
+                        tile.currentPos = oldEmpty;
+                        updateTilePosition(tile);
+                        checkWin();
                     }
                 }
             }
         }
 
-        const p1 = new Fighter({ pos: { x: 150, y: 0 }, color: '#3b82f6', id: 1 });
-        const p2 = new Fighter({ pos: { x: 800, y: 0 }, color: '#ef4444', id: 2 });
+        window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+        window.addEventListener('touchmove', (e) => handleMove(e.touches[0].clientX, e.touches[0].clientY), {passive: false});
+        window.addEventListener('mouseup', () => isDragging = false);
+        window.addEventListener('touchend', () => isDragging = false);
 
-        function showNotice(text, color) {
-            const el = document.getElementById('notice-display'); el.innerHTML = text; el.style.color = color; el.style.textShadow = `0 0 20px ${color}`; el.style.opacity = '1';
-            setTimeout(() => { if(gameActive) el.style.opacity = '0'; }, 2000);
-        }
-
-        function endGame(text) {
-            gameActive = false; document.getElementById('win-text').innerText = text; document.getElementById('overlay').style.display = 'flex';
-        }
-
-        function handleInput() {
-            if (!gameActive) return;
-            p1.vel.x = 0; p2.vel.x = 0;
-            // P1
-            if (!p1.stunned && !p1.isWindingUp && !p1.isChargingUlt && !p1.isCountering) {
-                if (keys['a'] || keys['left_touch']) p1.vel.x = -config.moveSpeed;
-                if (keys['d'] || keys['right_touch']) p1.vel.x = config.moveSpeed;
-            }
-            // P2 (Keyboard only for second player in this hybrid version)
-            if (!p2.stunned && !p2.isWindingUp && !p2.isChargingUlt && !p2.isCountering) {
-                if (keys['j'] || keys['arrowleft']) p2.vel.x = -config.moveSpeed;
-                if (keys['l'] || keys['arrowright']) p2.vel.x = config.moveSpeed;
+        function updateTilePosition(tileObj) {
+            const coords = getCoords(tileObj.currentPos);
+            tileObj.element.style.transform = `translate(${coords.x}px, ${coords.y}px)`;
+            
+            // Highlight correct position
+            if (tileObj.value === tileObj.currentPos + 1) {
+                tileObj.element.classList.add('correct');
+            } else {
+                tileObj.element.classList.remove('correct');
             }
         }
 
-        function gameLoop() {
-            if (!gameActive) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            handleInput(); p1.update(p2); p2.update(p1);
-            document.getElementById('p1-health-fill').style.width = Math.max(0, p1.health) + '%';
-            document.getElementById('p2-health-fill').style.width = Math.max(0, p2.health) + '%';
-            if (p1.health <= 0) endGame("PLAYER 2 VICTORIOUS");
-            else if (p2.health <= 0) endGame("PLAYER 1 VICTORIOUS");
-            requestAnimationFrame(gameLoop);
+        function isSolvable(arr) {
+            let inv = 0;
+            const flat = arr.filter(v => v !== 15);
+            for (let i = 0; i < flat.length; i++) {
+                for (let j = i + 1; j < flat.length; j++) if (flat[i] > flat[j]) inv++;
+            }
+            const emptyR = 4 - Math.floor(arr.indexOf(15) / 4);
+            return (emptyR % 2 === 0) ? (inv % 2 !== 0) : (inv % 2 === 0);
         }
 
-        // Keyboard Listeners
-        window.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase(); keys[k] = true;
-            if (k === 'w') p1.jump();
-            if (k === 'i' || k === 'arrowup') p2.jump();
-            if (k === 's') p1.attack(); if (k === 'q') p1.counter(); if (k === 'e') p1.ultimate();
-            if (k === 'k') p2.attack(); if (k === 'u') p2.counter(); if (k === 'o') p2.ultimate();
-        });
-        window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
-
-        // Touch Listeners (for Player 1)
-        const setupTouch = (id, keyName) => {
-            const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
-        };
-
-        if (isMobile) {
-            setupTouch('btn-left', 'left_touch');
-            setupTouch('btn-right', 'right_touch');
-            document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); p1.jump(); });
-            document.getElementById('btn-slash').addEventListener('touchstart', (e) => { e.preventDefault(); p1.attack(); });
-            document.getElementById('btn-counter').addEventListener('touchstart', (e) => { e.preventDefault(); p1.counter(); });
-            document.getElementById('btn-ult').addEventListener('touchstart', (e) => { e.preventDefault(); p1.ultimate(); });
+        function isSolved(arr) {
+            for (let i = 0; i < 15; i++) if (arr[i] !== i) return false;
+            return true;
         }
 
-        setInterval(() => { if (gameActive) { timeLeft--; document.getElementById('timer').innerText = timeLeft; if (timeLeft <= 0) endGame("DRAW"); } }, 1000);
-        gameLoop();
+        function checkWin() {
+            const win = tiles.every(t => t.value === t.currentPos + 1);
+            if (win) {
+                setTimeout(() => winModal.classList.remove('hidden'), 400);
+            }
+        }
+
+        document.getElementById('reset-btn').onclick = initGame;
+        window.onresize = () => { updateDimensions(); tiles.forEach(updateTilePosition); };
+        window.onload = initGame;
     </script>
 </body>
 </html>
